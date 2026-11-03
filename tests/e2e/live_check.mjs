@@ -1,0 +1,24 @@
+// 本番のサイトで、実際に書類を入れて保存まで通す（サンプルのみ。実際の書類は使わない）
+import puppeteer from 'puppeteer-core'; import path from 'node:path';
+const URL_ = process.argv[2] || 'https://sumikeshi-jp.pages.dev/';
+const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: 600000, args: ['--no-sandbox'], defaultViewport: { width: 1440, height: 900 } });
+const page = await browser.newPage(); const host = new URL(URL_).host; const reqs = [], errs = [], bad = [];
+page.on('request', (r) => { if (!/^(blob|data):/.test(r.url())) reqs.push([r.method(), r.url()]); });
+page.on('response', (r) => { if (r.status() >= 400) bad.push(r.status() + ' ' + r.url()); });
+page.on('pageerror', (e) => errs.push(e.message));
+const t0 = Date.now();
+await page.goto(URL_, { waitUntil: 'load', timeout: 120000 });
+console.log('タイトル', await page.title(), '／分離', await page.evaluate(() => crossOriginIsolated));
+await (await page.$('#fileInput')).uploadFile(path.resolve('サンプル書類/甲第4号証_預金通帳（スマホ撮影）.jpg'), path.resolve('サンプル書類/甲第7号証_陳述書（文字データ入り）.pdf'));
+await page.waitForFunction(() => document.body.dataset.view === 'work', { timeout: 300000 }); console.log('確認を始められるまで', ((Date.now() - t0) / 1000).toFixed(1), '秒（初回）');
+await page.waitForFunction(() => document.body.dataset.reading !== '1', { timeout: 300000 }); console.log('全部読み終えるまで', ((Date.now() - t0) / 1000).toFixed(1), '秒');
+console.log('候補', await page.$$eval('#list .row', (e) => e.length), '行');
+await page.evaluate(async () => { const { S } = await import('./js/app.js'); S.items.forEach((i) => { i.seen = true; }); S.docs.forEach((d) => d.pages.forEach((p) => { p.seen = true; })); });
+await page.click('#toFinish'); await page.waitForSelector('#evTable tbody tr'); await page.click('#runExport');
+await page.waitForFunction(() => !document.getElementById('downloads').hidden || /失敗/.test(document.getElementById('checks').textContent), { timeout: 300000 });
+console.log('検査', await page.$$eval('#checks .mark', (m) => m.map((x) => x.textContent).join(' ')));
+const foreign = reqs.filter(([, u]) => new URL(u).host !== host);
+console.log('通信', reqs.length, '件／外部', foreign.length, foreign.slice(0, 5), '／GET以外', reqs.filter(([m]) => m !== 'GET').length);
+console.log('通信カウンタ', await page.$eval('#netCount', (e) => e.textContent));
+console.log('エラー応答', bad.length, bad.slice(0, 6), '／画面の誤り', errs.length, errs.slice(0, 3));
+await browser.close();

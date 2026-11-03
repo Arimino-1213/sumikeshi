@@ -1,0 +1,47 @@
+<!doctype html><meta charset="utf-8"><title>eval</title>
+<script type="module">
+import { Engine, loadFile } from '/js/pipeline.js';
+const engine = new Engine();
+window.boot = async () => { const t0 = performance.now(); const r = await engine.init(); return { ...r, ms: performance.now() - t0 }; };
+window.evalOne = async (url, name, type) => {
+  const blob = await (await fetch(url)).blob();
+  const file = new File([blob], name, { type: type || blob.type });
+  const t0 = performance.now();
+  const pages = await loadFile(file, engine);
+  window.lastPages = pages;
+  const t1 = performance.now();
+  const { hits, people } = await engine.detect([{ pages: pages.map((p) => ({ lines: p.lines })) }], {});
+  return { ms: t1 - t0, detectMs: performance.now() - t1, hits, people: people.map((p) => p.full),
+    pages: pages.map((p) => ({ width: p.width, height: p.height, transform: p.transform, notes: p.notes, source: p.source, seals: p.seals, lowConf: p.lowConf.length, lines: p.lines.map((l) => ({ text: l.text, conf: l.conf, box: l.box, vertical: l.vertical })) })) };
+};
+// 実際の画面と同じく、全部のファイルを読んでからまとめて検出する
+window.batch = [];
+window.loadOnly = async (url, name, type) => {
+  const blob = await (await fetch(url)).blob(); const file = new File([blob], name, { type: type || blob.type });
+  const t0 = performance.now(); const pages = await loadFile(file, engine); window.batch.push(pages);
+  return { sec: (performance.now() - t0) / 1000, pages: pages.map((p) => ({ source: p.source, notes: p.notes, seals: p.seals.length, lines: p.lines.map((l) => l.text) })) };
+};
+window.detectAll = async () => (await engine.detect(window.batch.map((pages) => ({ pages: pages.map((p) => ({ lines: p.lines })) })), {})).hits;
+// 正解の文字の枠の中で、濃い画素（＝文字）のうち黒塗りの外に残った割合を返す
+window.inkLeft = async (groups, masks) => {
+  const p = window.lastPages[0];
+  const bmp = await createImageBitmap(p.blob); const c = new OffscreenCanvas(p.width, p.height); const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(bmp, 0, 0); bmp.close();
+  const d = g.getImageData(0, 0, p.width, p.height).data; const W = p.width, H = p.height;
+  const inMask = (x, y) => masks.some((m) => x >= m[0] - 0.5 && x <= m[2] + 0.5 && y >= m[1] - 0.5 && y <= m[3] + 0.5);
+  return groups.map((rects) => {
+    let worst = 0, total = 0, left = 0;
+    for (const r of rects) {
+      const x0 = Math.max(0, Math.floor(r[0])), y0 = Math.max(0, Math.floor(r[1])), x1 = Math.min(W, Math.ceil(r[2])), y1 = Math.min(H, Math.ceil(r[3]));
+      // その枠の明るさの上限と下限から、文字の画素を決める
+      let hi = 0, lo = 255;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const v = (d[(y * W + x) * 4] + d[(y * W + x) * 4 + 1] + d[(y * W + x) * 4 + 2]) / 3; if (v > hi) hi = v; if (v < lo) lo = v; }
+      if (hi - lo < 40) continue;
+      const th = lo + (hi - lo) * 0.5; let t = 0, l = 0;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const o = (y * W + x) * 4; if ((d[o] + d[o + 1] + d[o + 2]) / 3 < th) { t++; if (!inMask(x, y)) l++; } }
+      total += t; left += l; if (t) worst = Math.max(worst, l / t);
+    }
+    return { total, left, worst };
+  });
+};
+window.ready = true;
+</script>

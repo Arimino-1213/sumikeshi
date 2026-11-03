@@ -1,0 +1,15 @@
+{
+  "name": "sumikeshi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "証拠書面の黒塗りをブラウザの中だけで行うアプリ",
+  "scripts": {},
+  "dependencies": {
+    "kuromoji": "^0.1.2",
+    "onnxruntime-web": "^1.31.1",
+    "pdfjs-dist": "^6.5.438",
+    "puppeteer-core": "^25.16.0"
+  },
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE"
+}

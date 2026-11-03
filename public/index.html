@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>墨消し｜証拠書面の黒塗り</title>
+<meta name="description" content="証拠書面の個人情報を、書類を外に出さずにブラウザの中だけで黒塗りします。文字データのない画像PDFで保存し、漏えい検査まで自動で行います。">
+<link rel="canonical" href="https://sumikeshi-jp.pages.dev/">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#141311">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body data-view="start">
+
+<header class="bar">
+  <a class="logo" href="./" aria-label="墨消し はじめの画面へ"><span class="logo-ink" aria-hidden="true"></span>墨消し</a>
+  <ol class="steps" aria-label="作業の段階">
+    <li data-step="start">書類を入れる</li>
+    <li data-step="work">確認する</li>
+    <li data-step="finish">保存する</li>
+  </ol>
+  <div class="proof" title="このページが自分のサイト以外へ行った通信の数です。安全設定で外への通信そのものを禁止しています。">
+    <span class="proof-dot" aria-hidden="true"></span>外への通信 <b id="netCount">0</b> 件
+  </div>
+  <button class="link-btn" id="wipe" hidden>全部消す</button>
+</header>
+
+<!-- ===== はじめ ===== -->
+<main id="start" class="view">
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">証拠書面の黒塗り</p>
+      <h1>書類を外に出さず、<br>黒塗りまで終える。</h1>
+      <p class="lead">PDFや写真はこの端末のブラウザの中だけで読みます。個人番号・住所・氏名などの候補を出すので、確かめて保存するだけです。文字データの残らない画像PDFになります。</p>
+
+      <fieldset class="scenes" id="scenePick">
+        <legend>どこまで隠しますか</legend>
+      </fieldset>
+
+      <label class="drop" id="drop" for="fileInput">
+        <input type="file" id="fileInput" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" multiple>
+        <span class="drop-main">書類をここに置く</span>
+        <span class="drop-sub">またはクリックして選ぶ。PDF・JPEG・PNG・WebP。複数まとめて入れられます</span>
+      </label>
+      <button class="link-btn memo-open" id="openMemoStart">案件メモを読み込む・学習の内容を見る</button>
+      <p class="error" id="startError" role="alert" hidden></p>
+    </div>
+
+    <div class="demo" aria-hidden="true">
+      <div class="sheet">
+        <p class="sheet-title">陳 述 書</p>
+        <p class="sheet-line right"><span class="plain">令和6年（家イ）第1234号</span></p>
+        <p class="sheet-line">申立人　<span class="red" data-n="氏名">山田　太郎</span></p>
+        <p class="sheet-line">住　所　<span class="red r2" data-n="住所">東京都新宿区夢見丘三丁目4番5号</span></p>
+        <p class="sheet-line">電　話　<span class="red r3" data-n="電話">09-1234-5678</span></p>
+        <p class="sheet-line">個人番号　<span class="red r4" data-n="個人番号">1234 5678 9012</span></p>
+        <p class="sheet-body">私は、<span class="red r5" data-n="勤務先">夢見丘商事株式会社</span>に勤務しています。相手方が職場に電話をかけてくることが令和6年3月ごろから増えました。生活費として毎月金15万円の振込がありましたが、同年8月から止まっています。</p>
+        <p class="sheet-body">長男は<span class="red r6" data-n="学校">夢見丘第二小学校</span>の3年生です。担任の先生にも相談しました。以上のとおり、相違ありません。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="facts">
+    <div class="fact">
+      <h2>外に出ません</h2>
+      <p>送信先のサーバーがありません。読み取りも検出もこの端末で動きます。サイトの安全設定で、自分のサイト以外への通信を止めています。ページを閉じると、書類は消えます。</p>
+    </div>
+    <div class="fact">
+      <h2>何を探すか</h2>
+      <p>個人番号・住民票コード・免許証・旅券・基礎年金・保険証・在留カード・口座番号・住所・本籍・電話・メール・勤務先・学校・氏名・生年月日・車のナンバー・印影。縦書きと漢数字も読みます。</p>
+    </div>
+    <div class="fact">
+      <h2>見つけられないもの</h2>
+      <p>手書きの文字、顔写真、QRコード、灰色にスキャンされた印影は自動では探せません。ドラッグで塗れます。どこを隠すかの判断と最後の確認は、担当の方の役目です。</p>
+    </div>
+  </section>
+  <footer class="foot">
+    <span>裁判所の案内（東京・横浜・福島・山口の家庭裁判所）、個人情報保護法施行令1条、mints の書式に沿って作っています。</span>
+    <span class="foot-links"><a href="about.html">根拠と仕組み</a><span>Supported by <a href="https://agamay.com" rel="noopener noreferrer">AGAMAY</a></span></span>
+  </footer>
+</main>
+
+<!-- ===== 読み込み中 ===== -->
+<section id="loading" class="view" hidden aria-live="polite">
+  <div class="loading-box">
+    <p class="loading-title" id="loadTitle">読み取りの準備をしています</p>
+    <div class="meter"><span id="loadBar"></span></div>
+    <p class="loading-sub" id="loadSub">はじめの1回だけ、読み取りのプログラムをこの端末に読み込みます</p>
+    <button class="loading-cancel" id="cancelLoad">中止する</button>
+  </div>
+</section>
+
+<!-- ===== 確認 ===== -->
+<main id="work" class="view" hidden>
+  <aside class="rail" aria-label="書類とページ">
+    <div class="rail-head"><span>書類</span><label class="add-doc">追加<input type="file" id="addInput" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" multiple></label></div>
+    <div id="docList"></div>
+  </aside>
+
+  <section class="stage-wrap">
+    <div class="tools">
+      <div class="seg" role="group" aria-label="表示の切り替え">
+        <button id="modeEdit" class="on" title="候補の枠を見ながら確認します">確認</button>
+        <button id="modeFinal" title="保存したときの見た目です（F キー）">仕上がり</button>
+      </div>
+      <span class="tool-hint">ドラッグで追加／クリックで切替。選んだ枠だけ透けます（保存では透けません）</span>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="undo" title="元に戻す（Ctrl+Z）">戻す</button>
+      <button class="icon-btn" id="zoomOut" aria-label="縮小" title="Ctrl＋ホイールでも拡大縮小できます">−</button>
+      <button class="zoom-val" id="zoomVal" title="押すと100%に戻します（Ctrl+0）">100%</button>
+      <button class="icon-btn" id="zoomIn" aria-label="拡大">＋</button>
+      <button class="icon-btn" id="zoomFit" title="1ページ全体が収まる大きさにします">全体</button>
+      <span class="page-no" id="pageNo"></span>
+    </div>
+    <div class="read-bar" id="readBar" hidden role="status">
+      <span class="read-fill" id="readFill"></span>
+      <span class="read-text" id="readText"></span>
+      <span class="read-note">読めたページから確認できます</span>
+      <button class="read-cancel" id="cancelRead">中止</button>
+    </div>
+    <div class="stage" id="stage" tabindex="0" aria-label="ページ">
+      <div class="paper" id="paper">
+        <img id="pageImg" alt="ページの画像" draggable="false">
+        <div class="overlay" id="overlay"></div>
+      </div>
+    </div>
+    <div class="focus" id="focusBar" hidden>
+      <div class="focus-text">
+        <span class="focus-tag" id="focusTag"></span>
+        <span class="focus-val" id="focusVal"></span>
+        <span class="focus-why" id="focusWhy"></span>
+      </div>
+      <div class="focus-acts">
+        <button class="pill ghost" id="actAll" hidden>同じ語を全部隠す</button>
+        <button class="pill ink" id="actHide">隠す <kbd>H</kbd></button>
+        <button class="pill" id="actKeep">残す <kbd>N</kbd></button>
+        <button class="pill ghost" id="actRed" title="黒塗りできない情報に赤線を引き、非開示の希望を伝える方法です（横浜家裁の案内）">赤線</button>
+        <button class="pill ghost" id="actNext">次へ <kbd>Enter</kbd></button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel" aria-label="黒塗りの一覧">
+    <div class="panel-scene">
+      <label for="sceneSel">場面</label>
+      <select id="sceneSel"></select>
+    </div>
+    <button class="review-btn" id="nextReview"><span id="reviewLabel">確認を始める</span><span class="review-count" id="reviewCount"></span></button>
+    <div class="chips" id="chips" role="group" aria-label="種類で絞り込む"></div>
+    <form class="add-word" id="wordForm">
+      <input id="wordInput" type="text" placeholder="語を入れて全ページで隠す" aria-label="全ページで隠す語" autocomplete="off">
+      <button type="submit">追加</button>
+    </form>
+    <div class="list" id="list"></div>
+    <div class="panel-foot">
+      <p id="summary"></p>
+      <button class="link-btn memo-link" id="openMemo">案件メモと学習</button>
+      <button class="primary" id="toFinish">保存へ進む</button>
+    </div>
+  </aside>
+</main>
+
+<!-- ===== 保存 ===== -->
+<main id="finish" class="view" hidden>
+  <div class="finish-grid">
+    <section class="finish-left">
+      <button class="link-btn back" id="backWork">確認に戻る</button>
+      <h1 class="finish-title" id="finishTitle">提出の形を決める</h1>
+      <table class="ev-table" id="evTable"><thead><tr><th>号証</th><th>番号</th><th>枝番</th><th>元のファイル</th><th>ページ</th><th>黒塗り</th></tr></thead><tbody></tbody></table>
+      <fieldset class="opts">
+        <legend>書き出しの設定</legend>
+        <label class="opt"><input type="checkbox" id="optStamp" checked> <span>右上に証拠番号を入れる<small>mints は書証の右上に証拠番号を求めています</small></span></label>
+        <label class="opt"><input type="checkbox" id="optBinding"> <span>左にとじしろ 3cm を空ける<small>紙で家庭裁判所に出すとき</small></span></label>
+        <div class="opt-row">
+          <label>事件番号（任意）<input type="text" id="optCase" placeholder="令和6年（家）第123号" autocomplete="off"></label>
+          <label>提出者の名前（任意）<input type="text" id="optFiler" placeholder="余白に入ります" autocomplete="off"></label>
+        </div>
+      </fieldset>
+      <button class="primary wide" id="runExport">書き出して検査する</button>
+      <p class="error" id="exportError" role="alert" hidden></p>
+    </section>
+    <section class="finish-right">
+      <h2>検査</h2>
+      <ul class="checks" id="checks"><li class="wait">書き出すと、ここに結果が出ます</li></ul>
+      <div class="downloads" id="downloads" hidden>
+        <h2>保存</h2>
+        <a class="dl primary-dl" id="dlAll">提出用をまとめて保存<small>書証PDF＋黒塗り箇所の一覧（原文なし）のZIP</small></a>
+        <div id="dlEach" class="dl-each"></div>
+        <a class="dl" id="dlPng">画像で保存<small>ページごとのPNG（ZIP）</small></a>
+        <a class="dl" id="dlList">黒塗り箇所の一覧（提出用）<small>CSV。隠した文字は入りません</small></a>
+        <div class="internal">
+          <p><b>社内の控え専用</b>　隠した文字がそのまま入っています。提出物に混ぜないでください。</p>
+          <a class="dl warn" id="dlInternal">原文つきの一覧を保存<small>CSV</small></a>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<dialog class="memo" id="memoDlg" aria-labelledby="memoTitle">
+  <h2 id="memoTitle">案件メモと学習</h2>
+  <section>
+    <h3>案件メモ<small id="memoCount"></small></h3>
+    <p class="memo-note">この事件で決めた語です。タブの中だけにあり、閉じると消えます。次回も使うときは、パスワードをかけて保存してください。押すと忘れます。</p>
+    <div class="memo-words" id="memoWords"></div>
+    <div class="memo-file">
+      <label>パスワード（8文字以上）<input type="password" id="memoPass" autocomplete="new-password"></label>
+      <button class="pill" id="saveMemo">暗号化して保存</button>
+      <label class="pill file-pill">読み込む<input type="file" id="loadMemo" accept=".sumi"></label>
+      <a id="memoDl" hidden>保存</a>
+    </div>
+    <p class="error" id="memoError" role="alert" hidden></p>
+  </section>
+  <section>
+    <h3>この端末の傾向</h3>
+    <label class="memo-switch"><input type="checkbox" id="learnOn"> 確認の結果を学習する</label>
+    <p class="memo-note">残るのは種類ごとの回数と欄の名前だけで、書類の文字は残しません。外にも送りません。番号類・住所・電話などは、何度解除しても必ず隠す候補として出します。変わった候補は要確認に出します。</p>
+    <table class="memo-table"><thead><tr><th>種類</th><th>判断</th><th>解除</th><th>追加</th><th>次回</th></tr></thead><tbody id="learnRules"></tbody></table>
+    <p class="memo-note">手で隠したことのある欄：<span id="learnLabels"></span></p>
+    <button class="link-btn" id="clearLearn">この端末の記録を消す</button>
+  </section>
+  <button class="primary" id="closeMemo">閉じる</button>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

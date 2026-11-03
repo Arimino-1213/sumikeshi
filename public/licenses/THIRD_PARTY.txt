@@ -1,0 +1,35 @@
+墨消し本体のコード：PolyForm Shield License 1.0.0（Copyright (c) 2026 AGAMAY） https://polyformproject.org/licenses/shield/1.0.0
+
+同梱している部品とライセンス
+
+PP-OCRv5 mobile（文字の検出・読み取りモデル）
+  Copyright PaddlePaddle Authors. Apache License 2.0（Apache-2.0.txt）
+  ONNX 形式への変換：Satoru Nakamura（重みは変更なし） https://huggingface.co/nakamura196/ppocrv5-mobile-web-onnx
+
+PDF.js  Copyright Mozilla Foundation and contributors. Apache License 2.0（Apache-2.0.txt）
+
+kuromoji.js  Copyright Takuya Asano and contributors. Apache License 2.0（Apache-2.0.txt）
+  辞書 mecab-ipadic（kuromoji-NOTICE.txt）
+  変更点：vendor/kuromoji/kuromoji.js の辞書読み込みで、先頭2バイトを見てから解凍するようにした
+
+Noto Serif JP / Noto Sans JP（使う文字だけを抜粋）  SIL Open Font License 1.1（OFL-1.1.txt）
+
+ONNX Runtime Web  Copyright (c) Microsoft Corporation. MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

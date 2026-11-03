@@ -1,0 +1,58 @@
+// 検出する項目の一覧と、なぜ隠すかの根拠。画面と黒塗り一覧の両方で使う。
+export const BASIS = {
+  mynumber: '山口家裁・横浜家裁の案内（個人番号12桁全部を黒塗り）／番号法',
+  ppcId: '個人情報保護法施行令1条（個人識別符号）',
+  hitoku: '民訴法133条・東京家裁の注意事項（住所・居所・職場／氏名・本籍と推知事項）',
+  contact: '福島家裁の案内（住所・電話などの連絡先、勤務先）',
+  bank: '福島家裁の案内（通帳の口座番号・口座名義・支店名）',
+  person: '個人情報保護法2条1項（氏名・生年月日など特定の個人を識別できる情報）',
+  infer: '民訴法133条の2（秘匿事項を推知できる事項）',
+  seal: '印影は押印の偽造に悪用されるおそれがあるための任意の配慮',
+};
+export const CATEGORIES = {
+  mynumber: { label: '個人番号', group: 'number', basis: 'mynumber' },
+  jukicode: { label: '住民票コード', group: 'number', basis: 'ppcId' },
+  license: { label: '運転免許証番号', group: 'number', basis: 'ppcId' },
+  passport: { label: '旅券番号', group: 'number', basis: 'ppcId' },
+  pension: { label: '基礎年金番号', group: 'number', basis: 'ppcId' },
+  zairyu: { label: '在留カード番号', group: 'number', basis: 'ppcId' },
+  insurance: { label: '保険証の記号・番号', group: 'number', basis: 'ppcId' },
+  account: { label: '口座番号', group: 'number', basis: 'bank' },
+  card: { label: 'カード番号', group: 'number', basis: 'person' },
+  employee: { label: '社員番号', group: 'number', basis: 'person' },
+  mrn: { label: 'カルテ・診察券番号', group: 'number', basis: 'person' },
+  car: { label: '車のナンバー', group: 'number', basis: 'infer' },
+  bank: { label: '銀行・支店名', group: 'number', basis: 'bank' },
+  address: { label: '住所', group: 'place', basis: 'hitoku' },
+  postal: { label: '郵便番号', group: 'place', basis: 'hitoku' },
+  honseki: { label: '本籍', group: 'place', basis: 'hitoku' },
+  workplace: { label: '勤務先', group: 'place', basis: 'contact' },
+  school: { label: '学校・園', group: 'place', basis: 'infer' },
+  phone: { label: '電話・FAX', group: 'contact', basis: 'contact' },
+  email: { label: 'メール', group: 'contact', basis: 'contact' },
+  snsid: { label: 'SNSのID', group: 'contact', basis: 'contact' },
+  name: { label: '氏名', group: 'person', basis: 'person' },
+  kana: { label: '氏名（カナ）', group: 'person', basis: 'person' },
+  proname: { label: '弁護士・医師などの氏名', group: 'pro', basis: 'person' },
+  birth: { label: '生年月日', group: 'person', basis: 'person' },
+  age: { label: '年齢', group: 'person', basis: 'person' },
+  corp: { label: '会社・団体名', group: 'pro', basis: 'infer' },
+  seal: { label: '印影', group: 'pro', basis: 'seal' },
+  manual: { label: '手で追加', group: 'manual', basis: null },
+  word: { label: '指定した語', group: 'manual', basis: null },
+  learned: { label: '学習した欄の値', group: 'manual', basis: null },
+};
+export const GROUPS = {
+  number: { label: '番号', hint: '個人番号・口座・免許証など' },
+  place: { label: '居場所', hint: '住所・本籍・勤務先・学校' },
+  contact: { label: '連絡先', hint: '電話・メール・SNS' },
+  person: { label: '氏名・生年月日', hint: '個人を特定する情報' },
+  pro: { label: 'そのほか', hint: '専門職の氏名・会社名・印影' },
+  manual: { label: '手で追加', hint: '' },
+};
+// 場面ごとに最初から隠すグループ。あとから1件ずつ変えられる。
+export const SCENES = {
+  number: { label: '番号だけ', sub: '当事者どうしは知っている通常の書証', groups: ['number'] },
+  hitoku: { label: '居場所まで', sub: 'DV・秘匿の事案。住所・電話・勤務先も', groups: ['number', 'place', 'contact'] },
+  all: { label: '全部', sub: '社外や第三者に渡す書類。氏名まで', groups: ['number', 'place', 'contact', 'person', 'pro'] },
+};

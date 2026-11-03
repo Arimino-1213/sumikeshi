@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>根拠と仕組み｜墨消し</title>
+<meta name="description" content="墨消しが隠す候補にしている項目とその根拠、書類が外に出ない仕組み、自動で見つけられないものをまとめています。">
+<link rel="canonical" href="https://sumikeshi-jp.pages.dev/about">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/about.css">
+</head>
+<body data-view="about">
+<header class="bar"><a class="logo" href="./"><span class="logo-ink" aria-hidden="true"></span>墨消し</a></header>
+<main class="about">
+  <h1>根拠と仕組み</h1>
+  <p class="about-lead">何を隠す候補にしているか、なぜ書類が外に出ないのかを、確かめられる形で書いています。</p>
+
+  <h2>検出する項目と根拠</h2>
+  <table>
+    <thead><tr><th>項目</th><th>根拠</th></tr></thead>
+    <tbody>
+      <tr><td>個人番号（12桁）</td><td>山口家庭裁判所「マイナンバーの取扱いについて」は個人番号12桁全部のマスキングを、横浜家庭裁判所「書面を提出する場合の作成・提出方法について」（令和8年3月版）は必ず黒塗りを求めています。福島家庭裁判所の案内は、住民票・源泉徴収票・税の申告書・社会保障関係の書類を例に挙げています。</td></tr>
+      <tr><td>旅券・保険証・基礎年金・免許証・住民票コード・在留カード</td><td>個人情報の保護に関する法律施行令1条と施行規則4条に「個人識別符号」として列挙されています（個人情報保護委員会 通則ガイドライン 2-2）。</td></tr>
+      <tr><td>住所・居所・職場・本籍・氏名</td><td>民事訴訟法133条の秘匿の対象です。東京家庭裁判所の「秘匿決定申立て等に関する注意事項」は、例として職場の住所と本籍を挙げ、秘匿事項を推知できる事項も書類に書かないよう求めています。</td></tr>
+      <tr><td>電話などの連絡先・勤務先</td><td>福島家庭裁判所「家庭裁判所に提出する書面について」が、知られたくない情報の例として挙げています。</td></tr>
+      <tr><td>口座番号・口座名義・支店名</td><td>同じ案内が、通帳のうち「口座番号、口座名義、支店名」の載るページを挙げています。隠すかどうかは事案によります。</td></tr>
+      <tr><td>学校・車のナンバー</td><td>民事訴訟法133条の2の「推知できる事項」に当たりうるものとして、候補に出します。</td></tr>
+      <tr><td>印影</td><td>裁判所の案内に黒塗りの指示はありません。社外や公開に回すときの配慮として、任意の候補にしています。</td></tr>
+    </tbody>
+  </table>
+  <p class="note">どこまで隠すかは事案と提出先で変わります。主張や立証に必要な部分を隠すと、証拠としての意味が弱くなることがあります。判断に迷うときは担当の書記官に確かめてください。このツールは候補を出す道具で、法律上の助言ではありません。</p>
+
+  <h2>提出のかたち</h2>
+  <ul>
+    <li>書き出すPDFは A4 です。mints は「記録」に上げるPDFを A4・A3 に限っています（mints FAQ）。</li>
+    <li>書証の右上に証拠番号を入れられます。ファイル名は mints の例にならい「甲001」の形です（mints FAQ）。</li>
+    <li>紙で出すときの、左のとじしろ 3cm と余白の事件番号・提出者名にも対応しています（横浜家庭裁判所の案内）。</li>
+    <li>黒塗りできない情報には赤線を引けます。「非開示の希望に関する申出書」と一緒に出す方法です（同）。</li>
+    <li>元のファイル名は書き出しに使いません。ファイル名に氏名が入っていても持ち越さないためです。</li>
+  </ul>
+
+  <h2>書類が外に出ない理由</h2>
+  <ul>
+    <li><b>送り先がありません。</b>このサイトは静的なファイルの配信だけで、受け取るサーバーの処理を持ちません。</li>
+    <li><b>通信を禁止しています。</b>安全設定（Content-Security-Policy の connect-src 'self'）で、自分のサイト以外への通信をブラウザが止めます。ブラウザの開発者ツールで確かめられます。</li>
+    <li><b>書類は保存しません。</b>書類はタブのメモリの中だけに置きます。タブを閉じるか「全部消す」で消えます。</li>
+    <li><b>学習で残るのは回数だけです。</b>この端末に残るのは、種類ごとの判断の回数と欄の名前だけで、書類の文字は残しません（人名・地名を含む欄の名前は覚えません）。外にも送りません。画面で確認でき、止めることも消すこともできます。</li>
+    <li><b>案件メモは暗号化します。</b>語を次回も使うときは、パスワードをかけたファイル（AES-256）に保存します。ブラウザにもサーバーにも残しません。</li>
+    <li><b>書類の文字をプログラムとして扱いません。</b>読み取った文字は文字としてだけ表示し、PDF の中のスクリプトは動かしません。</li>
+  </ul>
+  <p class="note">端末そのものの安全（他の人に見られない、ウイルスがないなど）は、このサイトでは守れません。</p>
+
+  <h2>黒塗りが剥がれない理由</h2>
+  <p>黒い図形を上に重ねるのではなく、ページを画像にしてから黒く塗り、その画像だけでPDFを作り直します。保存の前に次を自動で検査します。</p>
+  <ul>
+    <li>塗った部分の内側がすべて真っ黒であること</li>
+    <li>PDFから文字が1文字も取り出せないこと</li>
+    <li>作成者・注釈・埋め込みファイルなどの入れ物がないこと</li>
+    <li>隠した語がファイルの中に見つからないこと</li>
+    <li>黒塗り後の画像をもう一度読み取っても、隠した語が読めないこと</li>
+  </ul>
+
+  <h2>できないこと</h2>
+  <ul>
+    <li>手書きの文字、顔写真、QRコード、灰色にスキャンされた印影は自動で見つけられません。ドラッグで塗ってください。</li>
+    <li>読み取りの誤りや、辞書にない珍しい名前は見落とすことがあります。必ず全ページを目で確かめてください。</li>
+    <li>パスワード付きのPDFと、iPhone の HEIC 形式は開けません。</li>
+  </ul>
+
+  <h2>使っている部品</h2>
+  <p class="small">PP-OCRv5 mobile（Apache-2.0、PaddlePaddle。ONNX 変換 Satoru Nakamura）／ONNX Runtime Web（MIT）／PDF.js（Apache-2.0）／kuromoji.js（Apache-2.0）と IPADIC（IPADIC 使用許諾）／Noto Serif JP・Noto Sans JP（SIL OFL 1.1）</p>
+  <p class="small">ソースコードは公開しています：<a href="https://github.com/Arimino-1213/sumikeshi" rel="noopener noreferrer">GitHub</a>（PolyForm Shield License 1.0.0。業務を含め無料で使えます。競合する製品の提供には使えません。無保証）</p>
+  <p><a href="./">はじめの画面へ戻る</a></p>
+  <p class="small">Supported by <a href="https://agamay.com" rel="noopener noreferrer">AGAMAY</a></p>
+</main>
+</body>
+</html>

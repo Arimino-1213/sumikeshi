@@ -1,0 +1,34 @@
+// 拡大縮小がページの部分だけに効くことを確かめる。黒塗りの枠がずれないことも見る
+import puppeteer from 'puppeteer-core'; import path from 'node:path';
+import { start } from '../serve.mjs';
+const port = 9000 + (process.pid % 900); const srv = await start(port);
+const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: 300000, args: ['--no-sandbox'], defaultViewport: { width: 1440, height: 900 } });
+let fail = 0; const ok = (n, c, i = '') => { console.log(c ? '合格' : '不合格', n, c ? '' : i); if (!c) fail++; };
+const page = await browser.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
+await (await page.$('#fileInput')).uploadFile(path.resolve('サンプル書類/甲第7号証_陳述書（文字データ入り）.pdf'));
+await page.waitForFunction(() => document.body.dataset.view === 'work' && document.body.dataset.reading !== '1', { timeout: 200000 }); await page.waitForSelector('#overlay .m');
+const st = () => page.evaluate(() => { const p = document.getElementById('paper').getBoundingClientRect(), m = document.querySelector('#overlay .m').getBoundingClientRect(); return { w: p.width, zoom: document.getElementById('zoomVal').textContent, dpr: devicePixelRatio, rail: document.querySelector('.rail').getBoundingClientRect().width, panel: document.querySelector('.panel').getBoundingClientRect().width, mx: (m.left - p.left) / p.width, top: document.getElementById('stage').scrollTop, scrollY }; });
+const a = await st(); console.log(a);
+const box = await (await page.$('#stage')).boundingBox(); const cx = box.x + box.width / 2, cy = box.y + 240;
+// カーソルの下の点を覚える
+const under = () => page.evaluate((x, y) => { const p = document.getElementById('paper').getBoundingClientRect(); return [(x - p.left) / p.width, (y - p.top) / p.height]; }, cx, cy);
+const u0 = await under();
+await page.mouse.move(cx, cy); await page.keyboard.down('Control'); await page.mouse.wheel({ deltaY: -300 }); await page.keyboard.up('Control'); await sleep(200);
+const b = await st(); const u1 = await under(); console.log(b);
+ok('Ctrl＋ホイールで拡大', b.w > a.w * 1.5, `${a.w}→${b.w}`);
+ok('カーソルの下の点が動かない', Math.abs(u0[0] - u1[0]) < 0.01 && Math.abs(u0[1] - u1[1]) < 0.01, JSON.stringify([u0, u1]));
+ok('ブラウザ全体の倍率は変わらない', b.dpr === a.dpr && b.rail === a.rail && b.panel === a.panel);
+ok('枠の位置が紙に対してずれない', Math.abs(b.mx - a.mx) < 0.001);
+await page.mouse.wheel({ deltaY: 200 }); await sleep(150); const c = await st(); ok('普通のホイールはスクロール', c.w === b.w && c.top !== b.top, JSON.stringify([b.top, c.top]));
+await page.click('#zoomFit'); await sleep(150); const d = await st(); const fits = await page.evaluate(() => document.getElementById('paper').getBoundingClientRect().height <= document.getElementById('stage').clientHeight); ok('「全体」で1ページが収まる', fits, JSON.stringify(d));
+await page.click('#zoomIn'); await sleep(100); const e = await st(); ok('＋ボタン', e.w > d.w);
+await page.click('#zoomOut'); await sleep(100); const f = await st(); ok('−ボタン', Math.abs(f.w - d.w) < 1);
+await page.click('#stage'); await page.keyboard.down('Control'); await page.keyboard.press('0'); await page.keyboard.up('Control'); await sleep(100); const g = await st(); ok('Ctrl+0 で100%', g.zoom === '100%', g.zoom);
+await page.keyboard.down('Control'); await page.keyboard.press('-'); await page.keyboard.up('Control'); await sleep(100); const h = await st(); ok('Ctrl+− で縮小', h.w < g.w && h.dpr === a.dpr);
+const hs = await page.evaluate(() => ['.tools', '.panel-scene', '.rail-head'].map((q) => document.querySelector(q).getBoundingClientRect().height)); console.log('帯の高さ', hs); ok('帯の高さがそろう', hs.every((v) => Math.abs(v - hs[0]) < 0.6), hs);
+await page.screenshot({ path: 'tests/out/shots/z1_zoom.png' });
+ok('画面の誤りなし', errs.length === 0, errs.slice(0, 3));
+console.log(fail ? `不合格 ${fail}` : 'すべて合格');
+await browser.close(); srv.close(); process.exit(fail ? 1 : 0);

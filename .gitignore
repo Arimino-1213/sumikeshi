@@ -1,0 +1,24 @@
+node_modules/
+_dl/
+tests/docs/
+tests/out/
+tests/out_*.log
+tests/bench/tess/
+.wrangler/
+tests/samples_raw/
+# 実際の書類を誤って載せないため、PDF と画像は既定で除外する（架空のサンプルだけ例外）
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.heic
+*.webp
+*.docx
+*.xlsx
+*.csv
+*.sumi
+!サンプル書類/*
+
+宣伝/
