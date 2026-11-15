@@ -3,6 +3,7 @@ import { Engine, loadFile, FriendlyError, Cancelled } from './pipeline.js';
 import { CATEGORIES, GROUPS, SCENES, BASIS } from './categories.js';
 import { runExport } from './finish.js';
 import { PROTECTED, effectOf, recordDecisions, recordLabel, learnedLabels, loadStats, saveStats, learnEnabled, setLearnEnabled, clearStats, emptyStats, readUnderRect, encryptMemo, decryptMemo } from './learn.js';
+import { motionOn, countTo, replay } from './motion.js';
 
 const $ = (id) => document.getElementById(id);
 const h = (tag, props = {}, ...kids) => {
@@ -30,13 +31,20 @@ try {
 document.addEventListener('securitypolicyviolation', (e) => { if (/^https?:/.test(e.blockedURI || '')) bumpNet(); });
 
 function show(view) {
+  const prev = document.body.dataset.view;
   for (const id of ['start', 'loading', 'work', 'finish']) $(id).hidden = id !== view;
   document.body.dataset.view = view;
   $('wipe').hidden = view === 'start';
   window.scrollTo(0, 0);
+  // 表示はすぐ切り替える（動きは飾りだけで、操作も試験も待たせない）
+  if (prev !== view) replay($(view), 'enter');
 }
 let toastTimer;
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3600); }
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg;
+  if (!t.hidden && motionOn()) { t.hidden = true; void t.offsetWidth; } // 続けて出すときも動きで気づけるように
+  t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3600);
+}
 
 // ---- はじめの画面 ----
 function buildScenePick() {
@@ -50,8 +58,9 @@ function buildScenePick() {
   sel.addEventListener('change', () => { S.scene = sel.value; pushUndo(); applyDefaults(); renderAll(); toast(`「${SCENES[S.scene].label}」に切り替えました。手で変えた箇所はそのままです`); });
 }
 const dropEl = $('drop');
-for (const ev of ['dragenter', 'dragover']) window.addEventListener(ev, (e) => { e.preventDefault(); dropEl.classList.add('over'); });
-for (const ev of ['dragleave', 'drop']) window.addEventListener(ev, (e) => { e.preventDefault(); if (ev === 'drop' || !e.relatedTarget) dropEl.classList.remove('over'); });
+const isFileDrag = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+for (const ev of ['dragenter', 'dragover']) window.addEventListener(ev, (e) => { e.preventDefault(); dropEl.classList.add('over'); if (isFileDrag(e)) document.body.dataset.drag = '1'; });
+for (const ev of ['dragleave', 'drop']) window.addEventListener(ev, (e) => { e.preventDefault(); if (ev === 'drop' || !e.relatedTarget) { dropEl.classList.remove('over'); delete document.body.dataset.drag; } });
 window.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) handleFiles([...e.dataTransfer.files]); });
 $('fileInput').addEventListener('change', (e) => { handleFiles([...e.target.files]); e.target.value = ''; });
 $('addInput').addEventListener('change', (e) => { handleFiles([...e.target.files]); e.target.value = ''; });
@@ -71,17 +80,22 @@ async function runQueue() {
     show('loading');
     $('loadTitle').textContent = '読み取りの準備をしています';
     $('loadSub').textContent = 'はじめの1回だけ、読み取りのプログラムをこの端末に読み込みます。書類は送信されません';
-    $('loadBar').style.width = '4%';
+    // 用意にかかる割合は分からないので、％の線ではなく往復の印を出す
+    $('loadBar').style.width = '0%'; $('loadMeter').classList.add('wait');
+    $('loadSheets').replaceChildren(); setLoadStage('engine');
   }
   renderReading();
   let refreshAt = 0;
   try {
     await engine.init();
+    R.engineReady = true;
     let nextNo = S.docs.reduce((m, d) => Math.max(m, d.no), 0) + 1;
     while (S.queue.length && !R.signal.cancelled) {
       const f = S.queue.shift(); R.fileNo++; R.page = 0; R.total = 0; R.name = f.name;
       R.fileTotal = R.fileNo + S.queue.length;
       const doc = { id: ++S.docSeq, name: f.name, side: '甲', no: nextNo, branch: '', pages: [] };
+      R.doc = doc;
+      if (document.body.dataset.view === 'loading') $('loadSheets').replaceChildren();
       renderReading();
       try {
         await loadFile(f, engine, {
@@ -93,6 +107,7 @@ async function runQueue() {
             doc.pages.push(p);
             // 最初のページで確認を始める。以降は数秒おきに候補を更新する
             if (document.body.dataset.view === 'loading') {
+              R.finding = true; renderReading();
               $('loadTitle').textContent = '個人情報を探しています'; $('loadSub').textContent = '氏名の辞書を読み込んでいます';
               await refreshDetection(); $('sceneSel').value = S.scene; S.di = S.docs.length - 1; S.pi = 0; if (curPage()) curPage().seen = true; show('work'); renderAll(); refreshAt = performance.now();
             } else if (performance.now() - refreshAt > 3000) { await refreshDetection(); renderAll(); refreshAt = performance.now(); } else renderRail();
@@ -134,6 +149,7 @@ function renderReading() {
   const busy = !!R || S.detecting > 0 || S.detectFailed;
   $('toFinish').disabled = busy;
   $('toFinish').textContent = S.detectFailed ? '候補を出せませんでした' : R ? '読み取りが終わると保存できます' : S.detecting > 0 ? '候補を更新しています' : '保存へ進む';
+  renderRailPending();
   if (!R) return;
   $('cancelRead').hidden = !!R.finalizing;
   $('cancelLoad').hidden = !!R.finalizing;
@@ -141,11 +157,49 @@ function renderReading() {
   $('readText').textContent = txt;
   const pct = R.fileTotal ? ((Math.max(0, R.fileNo - 1) + (R.total ? (R.page - 0.5) / R.total : 0)) / R.fileTotal) * 100 : 0;
   $('readFill').style.width = `${Math.max(3, pct)}%`;
+  if (document.body.dataset.view === 'loading') {
+    if (R.engineReady) $('loadMeter').classList.remove('wait');
+    setLoadStage(R.finding ? 'find' : R.engineReady ? 'read' : 'engine');
+    // 紙1枚＝1ページ。読み終えたページに墨が入り、読んでいるページに走査線が動く（実際の進み具合だけを映す）
+    syncSheets($('loadSheets'), R.total || 1, R.doc ? R.doc.pages.length : 0);
+  }
   if (document.body.dataset.view === 'loading' && R.fileNo) {
     $('loadTitle').textContent = R.fileTotal > 1 ? `読み取っています（${R.fileNo}／${R.fileTotal} ファイル）` : '読み取っています';
     $('loadSub').textContent = '1ページ読めたら、残りを待たずに確認を始められます。この端末の中で処理しています';
     $('loadBar').style.width = `${Math.max(6, pct)}%`;
   }
+}
+const STAGES = ['engine', 'read', 'find'];
+function setLoadStage(stage) {
+  const k = STAGES.indexOf(stage);
+  for (const li of $('loadSteps').children) { const i = STAGES.indexOf(li.dataset.s); li.classList.toggle('done', i < k); li.classList.toggle('now', i === k); if (i === k) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); }
+}
+// 紙の列を n 枚にそろえ、先頭から done 枚を「読み終えた」、次の1枚を「読んでいる」にする。
+// fromStart のときは減った分を先頭から外す（読み終えた紙が書類の列へ移っていくように見せる）
+const SHEET_MAX = 40;
+function syncSheets(box, n, done, fromStart = false) {
+  const want = Math.min(n, SHEET_MAX);
+  const sheets = () => [...box.querySelectorAll('.sh')];
+  while (sheets().length > want) (fromStart ? sheets()[0] : sheets().at(-1)).remove();
+  while (sheets().length < want) {
+    const sh = h('span', { class: 'sh' + (motionOn() ? ' new' : '') }, h('i'), h('i'), h('i'), h('i'), h('i'), h('b', { class: 'scan' }));
+    sh.addEventListener('animationend', (e) => { if (e.animationName === 'sheet-drop') sh.classList.remove('new'); });
+    box.querySelector('.sheets-more') ? box.insertBefore(sh, box.querySelector('.sheets-more')) : box.append(sh);
+  }
+  sheets().forEach((sh, i) => { sh.classList.toggle('done', i < done); sh.classList.toggle('now', i === done && done < n); });
+  let more = box.querySelector('.sheets-more');
+  if (n > SHEET_MAX) { if (!more) { more = h('span', { class: 'sheets-more' }); box.append(more); } more.textContent = `＋${n - SHEET_MAX}`; } else more?.remove();
+}
+// 確認の画面：まだ読んでいるページを、書類の列の最後に紙で出す
+function renderRailPending() {
+  const R = S.reading, box = $('railPending');
+  const done = R?.doc ? R.doc.pages.length : 0;
+  const left = R && !R.finalizing && R.total ? R.total - done : 0;
+  const queued = R && !R.finalizing ? S.queue.length : 0;
+  box.hidden = !(left > 0 || queued > 0) || document.body.dataset.view !== 'work';
+  if (box.hidden) { $('railSheets').replaceChildren(); return; }
+  $('railPendName').textContent = `読み取り中：${R.name || ''}${queued ? `（ほか ${queued} ファイル）` : ''}`;
+  syncSheets($('railSheets'), Math.max(left, 1), 0, true);
 }
 $('cancelLoad').addEventListener('click', cancelReading);
 $('cancelRead').addEventListener('click', cancelReading);
@@ -244,14 +298,18 @@ function renderRail() {
     // 画像は作り直すと重いので、書類が増えたときだけ組み直す
     box.dataset.sig = sig; box.replaceChildren();
     S.docs.forEach((d, di) => {
-      box.append(h('div', { class: 'doc-name', title: d.name }, h('button', { class: 'doc-x', title: 'この書類を外す', 'aria-label': `${d.name} を外す`, text: '×', onclick: () => removeDoc(di) }), h('b', { text: evLabel(d) }), d.name));
+      const wrap = h('div', { class: 'doc' });
+      wrap.append(h('div', { class: 'doc-name', title: d.name }, h('button', { class: 'doc-x', title: 'この書類を外す', 'aria-label': `${d.name} を外す`, text: '×', onclick: () => removeDoc(di) }), h('b', { text: evLabel(d) }), h('span', { class: 'doc-file', text: d.name })));
       const grid = h('div', { class: 'thumbs' });
       d.pages.forEach((p, pi) => {
-        p.thumbEl = h('button', { class: 'thumb', 'aria-label': `${evLabel(d)} ${pi + 1}ページ`, onclick: () => go(di, pi) }, h('img', { src: p.url, alt: '', loading: 'lazy' }), h('span', { class: 'thumb-no', text: String(pi + 1) }));
+        // 初めて出るページだけ、紙が置かれる動きをつける（組み直しのたびに動かさない）
+        p.thumbEl = h('button', { class: 'thumb' + (!p.shown && motionOn() ? ' new' : ''), 'aria-label': `${evLabel(d)} ${pi + 1}ページ`, onclick: () => go(di, pi) }, h('img', { src: p.url, alt: '', loading: 'lazy' }), h('span', { class: 'thumb-no', text: String(pi + 1) }));
+        p.shown = true;
         p.markEl = h('span', { class: 'thumb-mark' }); p.markEl.hidden = true; p.thumbEl.append(p.markEl);
         grid.append(p.thumbEl);
       });
-      box.append(grid);
+      wrap.append(grid);
+      box.append(wrap);
     });
   }
   S.docs.forEach((d, di) => d.pages.forEach((p, pi) => {
@@ -280,9 +338,23 @@ function renderStage() {
   $('pageNo').textContent = `${S.pi + 1} / ${S.docs[S.di].pages.length}`;
   $('modeEdit').classList.toggle('on', !S.final); $('modeFinal').classList.toggle('on', S.final);
   const ov = $('overlay'); ov.replaceChildren();
+  // 前回の描画と比べ、変わった枠にだけ動きをつける（隠す→墨が引かれる／やめる→墨が引く／確かめた→朱の枠が閉じる）。
+  // 最初から隠れている枠は動かさない（ページを開いた瞬間に、隠すべき文字が見えないように）
+  const anim = motionOn() && lastStage && lastStage.page === p;
+  const nowOn = new Map(), nowSeen = new Map();
   for (const it of pageItems()) {
+    let fx = '';
+    if (anim) {
+      const was = lastStage.on.get(it.key);
+      if (was === false && it.on && it.style !== 'redline') fx = ' ink';
+      else if (was === true && !it.on) fx = ' unink';
+      else if (it.need && it.seen && lastStage.seen.get(it.key) === false) fx = ' checked';
+    }
+    if (motionOn() && it === S.sel && lastStage?.selKey !== it.key) fx += ' selnew';
+    nowOn.set(it.key, it.on); nowSeen.set(it.key, it.seen);
     for (const r of it.rects) {
-      const el = h('div', { class: `m ${it.on ? 'on' : 'off'}${it.need ? ' need' : ''}${it.seen ? ' seen' : ''}${it === S.sel ? ' sel' : ''}${it.style === 'redline' && it.on ? ' redline' : ''}`, title: `${labelOf(it)}：${it.text}` });
+      const tall = fx && (r[3] - r[1]) > (r[2] - r[0]) * 1.4 ? ' v' : '';
+      const el = h('div', { class: `m ${it.on ? 'on' : 'off'}${it.need ? ' need' : ''}${it.seen ? ' seen' : ''}${it === S.sel ? ' sel' : ''}${it.style === 'redline' && it.on ? ' redline' : ''}${fx}${tall}`, title: `${labelOf(it)}：${it.text}` });
       el.style.left = `${(r[0] / p.width) * 100}%`; el.style.top = `${(r[1] / p.height) * 100}%`;
       el.style.width = `${((r[2] - r[0]) / p.width) * 100}%`; el.style.height = `${((r[3] - r[1]) / p.height) * 100}%`;
       el.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -290,8 +362,13 @@ function renderStage() {
       ov.append(el);
     }
   }
+  lastStage = { page: p, on: nowOn, seen: nowSeen, selKey: S.sel?.key };
 }
-const labelOf = (it) => (it.type === 'lowconf' ? '読みにくい箇所' : CATEGORIES[it.type]?.label || it.type);
+let lastStage = null;
+// 動きが終わった枠から class を外し、普段の見た目（選んだ枠は透ける など）に戻す
+const FX_END = { 'sumi-bleed': ['ink'], 'sumi-out': ['unink'], 'sumi-out-v': ['unink'], 'frame-close': ['checked'], 'sel-snap': ['selnew', 'ink'] };
+$('overlay').addEventListener('animationend', (e) => { const c = FX_END[e.animationName]; if (c && e.target.classList) e.target.classList.remove(...c); });
+const labelOf =(it) => (it.type === 'lowconf' ? '読みにくい箇所' : CATEGORIES[it.type]?.label || it.type);
 
 // 一覧：同じ語はまとめて1行
 function buildRows() {
@@ -307,31 +384,51 @@ function buildRows() {
 }
 const GROUP_ORDER = ['attention', 'number', 'place', 'contact', 'person', 'pro', 'manual', 'low'];
 const GROUP_NAME = { attention: '目で確かめる', ...Object.fromEntries(Object.entries(GROUPS).map(([k, v]) => [k, v.label])), low: '念のため（最初は隠しません）' };
+// 一覧は描画のたびに作り直すので、初めて出る行だけを順に出し、数は前回の値から数え上げる
+const knownRows = new Set(); const chipPrev = new Map();
 function renderList() {
   const rows = buildRows();
   const need = (r) => r.items.some((i) => i.need && !i.seen);
+  // 作り直しでキーボードの位置を見失わないよう、押していた部品を覚えて戻す
+  const ae = document.activeElement;
+  const keepFocus = ae?.closest?.('#chips') ? { chip: ae.dataset.k } : ae?.closest?.('#list .row') ? { row: ae.closest('.row').dataset.key, cb: ae.matches('input') } : null;
   const chips = $('chips'); chips.replaceChildren();
   const counts = { all: rows.length, need: rows.filter(need).length };
   for (const g of GROUP_ORDER) counts[g] = rows.filter((r) => r.group === g).length;
-  const chip = (k, label) => { if (k !== 'all' && !counts[k]) return; chips.append(h('button', { class: 'chip' + (S.filter === k ? ' on' : ''), onclick: () => { S.filter = k; renderList(); } }, label, h('b', { text: String(counts[k]) }))); };
+  const chip = (k, label) => {
+    if (k !== 'all' && !counts[k]) return;
+    const b = h('b');
+    chips.append(h('button', { class: 'chip' + (S.filter === k ? ' on' : ''), 'data-k': k, 'aria-pressed': S.filter === k ? 'true' : 'false', onclick: () => { S.filter = k; renderList(); } }, label, b));
+    countTo(b, counts[k], chipPrev.get(k) ?? 0); chipPrev.set(k, counts[k]);
+  };
   chip('all', 'すべて'); chip('need', '要確認');
   for (const g of GROUP_ORDER) chip(g, GROUP_NAME[g]);
   const list = $('list'); list.replaceChildren();
   const shown = rows.filter((r) => S.filter === 'all' || (S.filter === 'need' ? need(r) : r.group === S.filter));
   if (!shown.length) list.append(h('p', { class: 'empty', text: S.items.length ? 'この絞り込みに当てはまる箇所はありません' : '候補は見つかりませんでした。ページをよく見て、隠す場所をドラッグで塗ってください' }));
+  const anim = motionOn(); let ni = 0;
+  const enter = (el, key) => { if (knownRows.has(key)) return; knownRows.add(key); if (!anim) return; el.classList.add('new'); el.style.setProperty('--d', `${Math.min(ni++, 18) * 34}ms`); };
   for (const g of GROUP_ORDER) {
     const inG = shown.filter((r) => r.group === g);
     if (!inG.length) continue;
-    list.append(h('div', { class: 'group-head', text: GROUP_NAME[g] }));
+    const head = h('div', { class: 'group-head', text: GROUP_NAME[g] }); enter(head, `group:${g}`); list.append(head);
     for (const r of inG) {
       const first = r.items[0]; const onN = r.items.filter((i) => i.on).length; const all = onN === r.items.length;
       const cb = h('input', { type: 'checkbox', 'aria-label': `${first.text} を隠す`, checked: all, onclick: (e) => e.stopPropagation(), onchange: (e) => { pushUndo(); r.items.forEach((i) => decide(i, { on: e.target.checked, seen: true })); renderAll(); } });
       if (onN && !all) cb.indeterminate = true;
       const sel = S.sel && r.items.includes(S.sel);
-      list.append(h('div', { class: `row${sel ? ' sel' : ''}${onN ? '' : ' off'}`, onclick: () => cycle(r) }, cb,
-        h('span', { class: 'row-main' }, h('span', { class: 'row-val', text: first.text }), h('span', { class: 'row-sub' }, need(r) ? h('span', { class: 'row-need', text: '要確認' }) : null, labelOf(first), first.learnedBy ? `・${first.learnedBy}` : '')),
-        r.items.length > 1 ? h('span', { class: 'row-n', text: `×${r.items.length}` }) : null));
+      // 四角の欄は広く押せるようにし、文字の部分はボタンにしてキーボードでも選べるようにする
+      const row = h('div', { class: `row${sel ? ' sel' : ''}${onN ? '' : ' off'}`, 'data-key': r.key, onclick: () => cycle(r) },
+        h('label', { class: 'row-check', onclick: (e) => e.stopPropagation() }, cb),
+        h('button', { class: 'row-main', type: 'button', title: r.items.length > 1 ? '押すたびに次の場所を見せます' : null }, h('span', { class: 'row-val', text: first.text }), h('span', { class: 'row-sub' }, need(r) ? h('span', { class: 'row-need', text: '要確認' }) : null, labelOf(first), first.learnedBy ? `・${first.learnedBy}` : '')),
+        r.items.length > 1 ? h('span', { class: 'row-n', text: `×${r.items.length}` }) : null);
+      enter(row, r.key);
+      list.append(row);
     }
+  }
+  if (keepFocus) {
+    const el = keepFocus.chip ? chips.querySelector(`[data-k="${CSS.escape(keepFocus.chip)}"]`) : [...list.querySelectorAll('.row')].find((x) => x.dataset.key === keepFocus.row)?.querySelector(keepFocus.cb ? 'input' : '.row-main');
+    el?.focus({ preventScroll: true });
   }
 }
 function cycle(row) {
@@ -376,6 +473,13 @@ function nextPending() {
   if (!list.length) { S.sel = null; renderAll(); toast('要確認はすべて見ました。念のため各ページも目で確かめてください'); return; }
   const after = S.sel ? list.find((i) => cmp(i, S.sel) > 0) : null;
   select(after || list[0], true);
+}
+// 保存の画面から、残っている要確認（なければ見ていないページ）へ戻る
+function backToPending() {
+  show('work');
+  if (S.items.some((i) => i.need && !i.seen)) { nextPending(); return; }
+  for (let di = 0; di < S.docs.length; di++) { const pi = S.docs[di].pages.findIndex((p) => !p.seen); if (pi >= 0) { go(di, pi); return; } }
+  renderAll();
 }
 
 // ---- 操作 ----
@@ -506,7 +610,7 @@ function renderFinish() {
       h('td', { text: String(S.items.filter((i) => i.doc === di && i.on).length) })));
   });
   $('checks').replaceChildren(h('li', { class: 'wait', text: '書き出すと、ここに結果が出ます' }));
-  $('downloads').hidden = true; $('exportError').hidden = true;
+  $('downloads').hidden = true; $('exportError').hidden = true; $('doneSeal').hidden = true;
   const pending = S.items.filter((i) => i.need && !i.seen).length; const unseen = S.docs.flatMap((d) => d.pages).filter((p) => !p.seen).length;
   const warn = [];
   if (pending) warn.push(`要確認が ${pending} 件残っています`);
@@ -519,17 +623,22 @@ function check(state, title, detail, action) {
 }
 $('runExport').addEventListener('click', async () => {
   if (S.reading || S.detecting > 0) { toast('候補の更新が終わってから書き出してください'); return; }
-  const btn = $('runExport'); btn.disabled = true; btn.textContent = '書き出しています'; $('exportError').hidden = true; $('downloads').hidden = true;
-  const box = $('checks'); box.replaceChildren(check('run', '書き出しと検査をしています'));
+  const btn = $('runExport'); btn.disabled = true; btn.textContent = '書き出しています'; $('exportError').hidden = true; $('downloads').hidden = true; $('doneSeal').hidden = true;
+  const box = $('checks');
+  // 進み具合：1ページ＝紙1枚。書き出して読み直し終えたページに墨が入る（finish.js が知らせるページ数だけを映す）
+  const runText = h('span', { text: '書き出しと検査をしています' }); const runSheets = h('div', { class: 'sheets', 'aria-hidden': 'true' });
+  box.replaceChildren(h('li', {}, h('span', { class: 'mark run', text: '検査中' }), h('span', {}, runText, runSheets)));
   try {
     const r = await runExport({
       docs: S.docs, items: S.items, engine,
       options: { stamp: $('optStamp').checked, binding: $('optBinding').checked, caseNo: $('optCase').value.trim(), filer: $('optFiler').value.trim(), scene: SCENES[S.scene].label },
-      onProgress: (msg) => { box.replaceChildren(check('run', msg)); },
+      onProgress: (msg) => { runText.textContent = msg; const m = msg.match(/（(\d+)／(\d+) ページ）/); if (m) syncSheets(runSheets, +m[2], +m[1] - 1); },
     });
     box.replaceChildren();
     for (const c of r.checks) {
-      const jump = c.jump ? h('button', { class: 'jump', text: 'この場所を見る', onclick: () => { show('work'); go(c.jump.doc, c.jump.page); } }) : null;
+      const jump = c.jump ? h('button', { class: 'jump back-btn', text: 'この場所を見る', onclick: () => { show('work'); go(c.jump.doc, c.jump.page); } })
+        // 人の目の確認が残っているときは、残りへ直接戻れるようにする（次にすることを示す）
+        : !c.ok && /人の目/.test(c.title) ? h('button', { class: 'back-btn', text: '確認に戻って残りを見る', onclick: backToPending }) : null;
       box.append(check(c.ok ? 'ok' : 'ng', c.title, c.detail, jump));
     }
     if (S.learnOn && store) { recordDecisions(S.stats, S.items); saveStats(store, S.stats); for (const i of S.items) if (i.counted) S.counted.add(i.key); }
@@ -539,8 +648,14 @@ $('runExport').addEventListener('click', async () => {
     const each = $('dlEach'); each.replaceChildren();
     for (const f of r.pdfs) { const a = h('a', { class: 'dl', text: f.name }); setDl(a, f.blob, f.name); each.append(a); }
     $('downloads').hidden = false;
-    if (!allOk) box.prepend(h('li', { class: 'ng-row' }, h('span', { class: 'mark ng', text: '注意' }), h('span', { text: '検査に通らない項目があります。上の場所を確かめてから保存してください' })));
+    if (!allOk) box.prepend(h('li', { class: 'ng-row' }, h('span', { class: 'mark ng', text: '注意' }), h('span', { text: '検査に通らない項目があります。下の「要確認」を確かめてから保存してください' })));
     $('finishTitle').textContent = allOk ? '検査に通りました。保存できます' : '検査で気になる箇所があります';
+    // 結果を1つずつ押していき、最後に保存の欄を出す。すべて合格なら題の横に「検査済」の判子
+    if (motionOn()) {
+      [...box.children].forEach((li, i) => { li.style.setProperty('--d', `${i * 70}ms`); li.classList.add('in'); });
+      const dl = $('downloads'); dl.style.setProperty('--d', `${box.children.length * 70 + 80}ms`); replay(dl, 'in');
+    }
+    $('doneSeal').hidden = !allOk;
   } catch (e) {
     box.replaceChildren(check('ng', '書き出しに失敗しました', `ファイルは作られていません。理由：${e.message}`));
     const er = $('exportError'); er.textContent = 'メモリが足りない場合は、ほかのタブを閉じるか、書類を分けて試してください。'; er.hidden = false;

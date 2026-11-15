@@ -32,7 +32,7 @@
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">証拠書面の黒塗り</p>
-      <h1>書類を外に出さず、<br>黒塗りまで終える。</h1>
+      <h1><span class="ln"><span>書類を外に出さず、</span></span><span class="ln"><span>黒塗りまで<wbr>終える。</span></span></h1>
       <p class="lead">PDFや写真はこの端末のブラウザの中だけで読みます。個人番号・住所・氏名などの候補を出すので、確かめて保存するだけです。文字データの残らない画像PDFになります。</p>
 
       <fieldset class="scenes" id="scenePick">
@@ -41,8 +41,10 @@
 
       <label class="drop" id="drop" for="fileInput">
         <input type="file" id="fileInput" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" multiple>
+        <span class="drop-marks" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="drop-main">書類をここに置く</span>
-        <span class="drop-sub">またはクリックして選ぶ。PDF・JPEG・PNG・WebP。複数まとめて入れられます</span>
+        <span class="drop-sub">またはクリックして選ぶ。PDF・JPEG・PNG・WebP。<wbr>複数まとめて入れられます</span>
+        <span class="drop-over" aria-hidden="true">離すと読み取りを始めます</span>
       </label>
       <button class="link-btn memo-open" id="openMemoStart">案件メモを読み込む・学習の内容を見る</button>
       <p class="error" id="startError" role="alert" hidden></p>
@@ -85,8 +87,14 @@
 <!-- ===== 読み込み中 ===== -->
 <section id="loading" class="view" hidden aria-live="polite">
   <div class="loading-box">
+    <ol class="load-steps" id="loadSteps" aria-label="読み取りの段階">
+      <li data-s="engine">プログラムを用意</li>
+      <li data-s="read">ページを読み取る</li>
+      <li data-s="find">個人情報を探す</li>
+    </ol>
     <p class="loading-title" id="loadTitle">読み取りの準備をしています</p>
-    <div class="meter"><span id="loadBar"></span></div>
+    <div class="sheets" id="loadSheets" aria-hidden="true"></div>
+    <div class="meter" id="loadMeter"><span id="loadBar"></span></div>
     <p class="loading-sub" id="loadSub">はじめの1回だけ、読み取りのプログラムをこの端末に読み込みます</p>
     <button class="loading-cancel" id="cancelLoad">中止する</button>
   </div>
@@ -97,6 +105,7 @@
   <aside class="rail" aria-label="書類とページ">
     <div class="rail-head"><span>書類</span><label class="add-doc">追加<input type="file" id="addInput" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" multiple></label></div>
     <div id="docList"></div>
+    <div class="rail-pending" id="railPending" hidden aria-hidden="true"><p class="rp-name" id="railPendName"></p><div class="sheets sm" id="railSheets"></div></div>
   </aside>
 
   <section class="stage-wrap">
@@ -147,7 +156,7 @@
       <label for="sceneSel">場面</label>
       <select id="sceneSel"></select>
     </div>
-    <button class="review-btn" id="nextReview"><span id="reviewLabel">確認を始める</span><span class="review-count" id="reviewCount"></span></button>
+    <button class="review-btn" id="nextReview"><span id="reviewLabel">確認を始める</span><span class="seal" aria-hidden="true">済</span><span class="review-count" id="reviewCount"></span></button>
     <div class="chips" id="chips" role="group" aria-label="種類で絞り込む"></div>
     <form class="add-word" id="wordForm">
       <input id="wordInput" type="text" placeholder="語を入れて全ページで隠す" aria-label="全ページで隠す語" autocomplete="off">
@@ -167,7 +176,7 @@
   <div class="finish-grid">
     <section class="finish-left">
       <button class="link-btn back" id="backWork">確認に戻る</button>
-      <h1 class="finish-title" id="finishTitle">提出の形を決める</h1>
+      <div class="finish-head"><h1 class="finish-title" id="finishTitle">提出の形を決める</h1><span class="seal seal-big" id="doneSeal" aria-hidden="true" hidden>検査済</span></div>
       <table class="ev-table" id="evTable"><thead><tr><th>号証</th><th>番号</th><th>枝番</th><th>元のファイル</th><th>ページ</th><th>黒塗り</th></tr></thead><tbody></tbody></table>
       <fieldset class="opts">
         <legend>書き出しの設定</legend>
@@ -225,5 +234,6 @@
 </dialog>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="drop-veil" aria-hidden="true"><p>離すと書類を追加します</p></div>
 </body>
 </html>

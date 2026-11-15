@@ -37,7 +37,15 @@ body[data-view="start"] .steps [data-step="start"], body[data-view="loading"] .s
 
 /* はじめの画面 */
 .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); min-height: calc(100vh - 52px - 150px); border-bottom: 1px solid var(--line); }
-.hero-copy { padding: 54px 56px 44px clamp(24px, 6vw, 96px); animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+.hero-copy { padding: 54px 56px 44px clamp(24px, 6vw, 96px); }
+/* 題は1行ずつ下から現れ、ほかは少しずつ遅れて上がる */
+.hero-copy > * { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+.hero-copy > h1 { animation: none; }
+.hero-copy > .lead { animation-delay: .28s; } .hero-copy > .scenes { animation-delay: .38s; } .hero-copy > .drop { animation-delay: .46s; } .hero-copy > .memo-open { animation-delay: .54s; }
+.ln { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
+.ln > span { display: inline-block; animation: ln-up .95s cubic-bezier(.16,.84,.24,1) .06s both; }
+.ln + .ln > span { animation-delay: .16s; }
+@keyframes ln-up { from { transform: translateY(108%); } }
 .eyebrow { font-size: 12.5px; letter-spacing: .28em; color: var(--ink-3); margin: 0 0 16px; }
 h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 48px); line-height: 1.32; letter-spacing: .03em; margin: 0 0 20px; word-break: keep-all; }
 .lead { max-width: 33em; color: var(--ink-2); margin: 0 0 28px; }
@@ -57,6 +65,17 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .drop-sub { font-size: 12.5px; color: var(--ink-3); }
 .drop:hover, .drop.over { background: var(--ink); color: var(--paper); }
 .drop:hover .drop-sub, .drop.over .drop-sub { color: var(--paper-3); }
+/* 四隅のトンボ（印刷の裁ち落としの印）。ゆっくり呼吸し、近づくと枠に寄る */
+.drop-marks i { position: absolute; width: 14px; height: 14px; border: 0 solid var(--ink); transition: transform .25s cubic-bezier(.2,.7,.2,1), border-color .2s; animation: breathe 3.4s ease-in-out infinite; }
+.drop-marks i:nth-child(1) { left: -10px; top: -10px; border-left-width: 1.5px; border-top-width: 1.5px; --dx: -3px; --dy: -3px; }
+.drop-marks i:nth-child(2) { right: -10px; top: -10px; border-right-width: 1.5px; border-top-width: 1.5px; --dx: 3px; --dy: -3px; }
+.drop-marks i:nth-child(3) { right: -10px; bottom: -10px; border-right-width: 1.5px; border-bottom-width: 1.5px; --dx: 3px; --dy: 3px; }
+.drop-marks i:nth-child(4) { left: -10px; bottom: -10px; border-left-width: 1.5px; border-bottom-width: 1.5px; --dx: -3px; --dy: 3px; }
+@keyframes breathe { 50% { transform: translate(var(--dx), var(--dy)); } }
+.drop:hover .drop-marks i, .drop.over .drop-marks i { animation: none; transform: translate(calc(var(--dx) * -1.6), calc(var(--dy) * -1.6)); border-color: var(--shu); }
+.drop-over { display: none; font-family: var(--serif); font-weight: 600; font-size: 21px; letter-spacing: .08em; }
+.drop.over .drop-main, .drop.over .drop-sub { display: none; }
+.drop.over .drop-over { display: block; animation: rise .25s ease both; }
 .drop:has(input:focus-visible) { outline: 2px solid var(--shu); outline-offset: 2px; }
 .error { color: var(--shu); font-size: 13.5px; margin: 12px 0 0; }
 
@@ -69,7 +88,8 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .sheet-body { margin: 16px 0 0; }
 .red { position: relative; display: inline; }
 .red { cursor: help; }
-.red::before { content: ""; position: absolute; left: -2px; right: -2px; top: .22em; bottom: .12em; background: var(--ink); transform-origin: left center; transform: scaleX(0); animation: stroke .5s .9s cubic-bezier(.65,0,.3,1) forwards; transition: opacity .18s; }
+/* 見本の墨は筆の形（img/brush.svg）を左から引いていく。仕事の画面の黒塗りは四角のまま */
+.red::before { content: ""; position: absolute; left: -4px; right: -6px; top: .16em; bottom: .06em; background: var(--ink); -webkit-mask: url("../img/brush.svg") 0 0 / 100% 100% no-repeat; mask: url("../img/brush.svg") 0 0 / 100% 100% no-repeat; clip-path: inset(0 100% 0 0); animation: stroke .55s .9s cubic-bezier(.65,0,.3,1) forwards; transition: opacity .18s; }
 .red:hover::before { opacity: .28; }
 .red::after { content: attr(data-n); position: absolute; left: 100%; margin-left: 10px; top: .1em; font-family: var(--sans); font-size: .72em; color: var(--shu); white-space: nowrap; letter-spacing: .05em; opacity: 0; animation: note .3s 1.3s ease forwards; }
 .r2::before { animation-delay: 1.25s; } .r2::after { animation-delay: 1.65s; }
@@ -77,7 +97,7 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .r4::before { animation-delay: 1.95s; } .r4::after { animation-delay: 2.35s; }
 .r5::before { animation-delay: 2.3s; } .r5::after { display: none; }
 .r6::before { animation-delay: 2.6s; } .r6::after { display: none; }
-@keyframes stroke { to { transform: scaleX(1); } }
+@keyframes stroke { to { clip-path: inset(0 0 0 0); } }
 @keyframes note { to { opacity: 1; } }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(14px); } }
@@ -173,11 +193,14 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .add-word button:hover { background: var(--ink); color: var(--paper); }
 .list { flex: 1; overflow-y: auto; min-height: 0; }
 .group-head { position: sticky; top: 0; z-index: 1; background: var(--paper-2); font-size: 11.5px; letter-spacing: .08em; color: var(--ink-3); padding: 3px 14px; border-bottom: 1px solid var(--line); }
-.row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 7px 14px 7px 14px; border-bottom: 1px solid var(--paper-3); cursor: pointer; }
+.row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: stretch; gap: 0 4px; padding: 0 14px 0 2px; border-bottom: 1px solid var(--paper-3); cursor: pointer; }
 .row:hover { background: var(--white); }
 .row.sel { background: var(--white); box-shadow: inset 3px 0 0 var(--shu); }
-.row input[type=checkbox] { width: 15px; height: 15px; margin: 0; accent-color: var(--ink); }
-.row-main { min-width: 0; }
+/* 四角を押しやすく：チェックの欄全体（40×44px 以上）を押せるようにする */
+.row-check { display: flex; align-items: center; justify-content: center; min-height: 44px; cursor: pointer; }
+.row input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--ink); cursor: pointer; }
+.row-main { min-width: 0; display: block; width: 100%; text-align: left; padding: 7px 0; }
+.row-n { align-self: center; }
 .row-val { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .row-sub { font-size: 11px; color: var(--ink-3); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-need { color: var(--shu); margin-right: 6px; }
@@ -195,7 +218,9 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .finish-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); min-height: calc(100vh - 52px); }
 .finish-left { padding: 28px clamp(22px, 5vw, 72px) 44px; }
 .finish-right { background: var(--ink); color: var(--paper); padding: 34px clamp(22px, 3.4vw, 48px) 44px; }
-.finish-title { font-size: 30px; margin: 14px 0 20px; }
+/* 題は JS が文を入れ替えるので、語の切れ目で折る（keep-all のままだと狭い画面で横にはみ出していた） */
+.finish-head { display: flex; align-items: center; gap: 18px; margin: 14px 0 20px; }
+.finish-title { font-size: 30px; margin: 0; word-break: normal; word-break: auto-phrase; overflow-wrap: anywhere; min-width: 0; flex: 1; }
 .back { color: var(--ink-3); }
 .ev-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 24px; border-top: 1px solid var(--ink); }
 .ev-table th { font-weight: 400; font-size: 12px; color: var(--ink-3); text-align: left; padding: 6px 8px 5px 0; border-bottom: 1px solid var(--line); }
@@ -241,7 +266,7 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
 .read-note { color: var(--paper-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .read-cancel { padding: 1px 12px; border: 1px solid var(--line-dark); color: var(--paper); flex: none; }
 .read-cancel:hover { border-color: var(--paper); }
-.doc-x { float: right; width: 18px; height: 18px; line-height: 16px; text-align: center; color: var(--paper-3); margin-left: 4px; }
+.doc-x { float: right; position: relative; z-index: 1; width: 18px; height: 18px; line-height: 16px; text-align: center; color: var(--paper-3); margin-left: 4px; }
 .doc-x:hover { color: #fff; background: var(--shu); }
 .primary:disabled { font-size: 13.5px; letter-spacing: .02em; }
 .memo-open { display: inline-block; margin-top: 12px; color: var(--ink-3); }
@@ -310,5 +335,150 @@ h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 3.5vw, 
   .opt-row { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition: none !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+  .scan, .meter.wait::after { display: none !important; }
 }
+/* ?motion=off（試験や画面の記録用）でも同じように止める */
+.still *, .still *::before, .still *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+.still .scan, .still .meter.wait::after { display: none !important; }
+
+/* ===== 動きと手ざわり（外部の読み込みなし。動きを減らす設定と ?motion=off では止まり、最初から全部見える） ===== */
+h1, h2, h3, .loading-title { text-wrap: balance; }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* 画面の切り替え：新しい画面が下から静かに出る（操作はすぐ効く。透明な間も押せる） */
+.view.enter { animation: view-in .38s cubic-bezier(.2,.7,.2,1) both; }
+#work.view.enter { animation-name: fade-in; animation-duration: .3s; }
+@keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* 上の帯の「外への通信」：見張っていることを、点のゆっくりした明滅で示す（通信があれば朱で止まる） */
+.proof-dot { animation: watch 2.8s ease-in-out infinite; }
+.proof.bad .proof-dot { animation: none; }
+@keyframes watch { 50% { opacity: .3; } }
+
+/* 読み取り中：段階・ページの紙・本当の進み具合 */
+.load-steps { list-style: none; margin: 0 0 26px; padding: 0; display: flex; font-size: 12.5px; color: var(--ink-4); letter-spacing: .04em; }
+.load-steps li { flex: 1; position: relative; padding: 9px 10px 0 0; border-top: 1px solid var(--line-dark); }
+.load-steps li::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 1px; background: var(--paper-3); transform-origin: left; transform: scaleX(0); transition: transform .6s cubic-bezier(.6,0,.2,1); }
+.load-steps li.now { color: var(--paper); font-weight: 600; }
+.load-steps li.done { color: var(--paper-3); }
+.load-steps li.now::before { transform: scaleX(1); background: #f0a08e; }
+.load-steps li.done::before { transform: scaleX(1); }
+.sheets { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 18px; min-height: 54px; }
+.sh { position: relative; flex: none; width: 40px; height: 54px; background: var(--white); overflow: hidden; display: flex; flex-direction: column; gap: 5px; padding: 9px 6px; opacity: .22; transition: opacity .3s; }
+.sh i { display: block; height: 2px; background: var(--paper-3); }
+.sh i:nth-child(1) { width: 58%; } .sh i:nth-child(2) { width: 100%; } .sh i:nth-child(3) { width: 86%; } .sh i:nth-child(4) { width: 100%; } .sh i:nth-child(5) { width: 44%; }
+.sh.now, .sh.done { opacity: 1; }
+.sh.new { animation: sheet-drop .4s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes sheet-drop { from { opacity: 0; transform: translateY(-10px) rotate(-4deg); } }
+/* 読み終えた紙には墨が入る */
+.sh.done i:nth-child(2), .sh.done i:nth-child(4) { height: 5px; margin: -1.5px 0; background: var(--ink); animation: bar-in .42s cubic-bezier(.6,0,.2,1) both; }
+.sh.done i:nth-child(4) { width: 62%; animation-delay: .12s; }
+@keyframes bar-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* 読んでいる紙：走査線が上下する（これは「動いている」印で、進み具合は紙の枚数と下の線で示す） */
+.scan { display: none; }
+.sh.now .scan { display: block; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--shu); box-shadow: 0 0 0 1px rgba(197, 52, 29, .18); animation: scan 1.3s ease-in-out infinite alternate; }
+@keyframes scan { to { transform: translateY(52px); } }
+.sheets-more { align-self: center; font-family: var(--mono); font-size: 12px; color: var(--paper-3); }
+.meter { position: relative; }
+/* プログラムの用意中は割合が分からないので、割合に見えない往復の印にする（偽の％を出さない） */
+.meter.wait span { width: 0 !important; }
+.meter.wait::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 18%; background: var(--paper-3); animation: shuttle 1.2s ease-in-out infinite alternate; }
+@keyframes shuttle { to { transform: translateX(455%); } }
+
+/* 確認の画面で、まだ読んでいるページを書類の列の最後に紙で出す */
+.rail-pending { padding: 8px 14px 14px; border-top: 1px solid var(--line-dark); }
+.rail-pending .rp-name { margin: 0 0 6px; font-size: 11.5px; color: var(--paper-3); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheets.sm { gap: 5px; margin: 0; min-height: 0; }
+.sheets.sm .sh { width: 30px; height: 40px; padding: 6px 4px; gap: 4px; }
+.sheets.sm .sh.now .scan { animation-name: scan-sm; }
+@keyframes scan-sm { to { transform: translateY(38px); } }
+.thumb.new { animation: sheet-drop .45s cubic-bezier(.2,.7,.2,1) both; }
+
+/* 墨を塗る：採用すると左から（縦長の枠は上から）墨が引かれ、紙ににじむ。取り消すと墨が引いていく */
+.m.on.ink { background: transparent; animation: sumi-bleed .7s .24s ease-out; }
+.m.on.ink::before { content: ""; position: absolute; inset: 0; background: #000; animation: sumi-in .34s cubic-bezier(.62,0,.24,1) both; pointer-events: none; }
+.m.on.ink.v::before { animation-name: sumi-in-v; }
+.m.on.ink.sel::before, .m.on.ink:hover::before { background: rgba(20, 19, 17, .62); }
+.final .m.on.ink::before { background: #000; }
+/* clip-path は none とは補間されず途中で切り替わるので、始めと終わりを両方 inset で書く */
+@keyframes sumi-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes sumi-in-v { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes sumi-bleed { from { box-shadow: 0 0 0 0 rgba(20, 19, 17, .5); } to { box-shadow: 0 0 0 7px rgba(20, 19, 17, 0); } }
+.m.off.unink::before { content: ""; position: absolute; inset: 0; background: #000; pointer-events: none; animation: sumi-out .32s cubic-bezier(.5,0,.3,1) both; }
+.m.off.unink.v::before { animation-name: sumi-out-v; }
+@keyframes sumi-out { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); opacity: .15; } }
+@keyframes sumi-out-v { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(100% 0 0 0); opacity: .15; } }
+/* 要確認の朱の枠は、確かめると枠に吸い込まれて消える */
+.m.need.seen.checked::after { content: ""; position: absolute; inset: -3px; border: 1.5px solid var(--shu); pointer-events: none; animation: frame-close .42s cubic-bezier(.5,0,.2,1) forwards; }
+@keyframes frame-close { to { inset: 0; opacity: 0; } }
+/* 次の候補へ移ると、朱の輪が外から寄って場所を知らせる */
+.m.sel.selnew { animation: sel-snap .5s cubic-bezier(.2,.7,.2,1); }
+@keyframes sel-snap { from { box-shadow: 0 0 0 18px rgba(197, 52, 29, 0), 0 0 0 26px rgba(197, 52, 29, 0); } }
+.final .m.need.seen.checked::after { display: none; }
+
+/* 判子：要確認を見終えたとき・検査に通ったとき */
+.seal { display: none; font-family: var(--serif); font-weight: 600; color: var(--shu); border: 1.5px solid var(--shu); line-height: 1; padding: 3px 3px 2px; font-size: 13px; letter-spacing: 0; transform: rotate(-6deg); }
+.review-btn.done .seal { display: inline-block; margin: 0 10px 0 auto; align-self: center; animation: stamp .42s cubic-bezier(.3,1.4,.5,1) both; }
+.seal.seal-big { display: inline-block; flex: none; font-size: 17px; padding: 7px 7px 6px; letter-spacing: .14em; border-width: 2px; animation: stamp .5s cubic-bezier(.3,1.4,.5,1) .2s both; }
+@keyframes stamp { from { transform: scale(2.3) rotate(-16deg); opacity: 0; } 55% { opacity: 1; } }
+
+/* 一覧：見つかった候補が上から順に出る。数は数え上がる */
+.row.new, .group-head.new { animation: row-in .42s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+@keyframes row-in { from { opacity: 0; transform: translateY(8px); } }
+.row-val { transition: color .2s; }
+.row-main:focus-visible { outline-offset: -2px; }
+.focus:not([hidden]) { animation: rise .24s cubic-bezier(.2,.7,.2,1) both; }
+
+/* 書き出し：ページの紙が刷られ、検査の結果が1つずつ押されていく */
+.checks .sheets { margin: 8px 0 2px; }
+.checks li.in { animation: row-in .4s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+.checks li.in .mark.ok, .checks li.in .mark.ng { display: inline-block; align-self: start; animation: stamp .38s cubic-bezier(.3,1.4,.5,1) calc(var(--d, 0ms) + 110ms) both; }
+.downloads.in { animation: rise .5s cubic-bezier(.2,.7,.2,1) var(--d, 0ms) both; }
+.checks .back-btn { display: inline-flex; align-items: center; min-height: 32px; margin-top: 6px; padding: 0 12px; border: 1px solid var(--paper-3); color: var(--paper); font-size: 12.5px; }
+.checks .back-btn:hover { background: var(--paper); color: var(--ink); }
+
+/* お知らせは下から出る */
+.toast:not([hidden]) { animation: toast-in .26s cubic-bezier(.2,.7,.2,1); }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* 確認の画面に書類をドラッグしたとき、離せば追加されることを示す */
+.drop-veil { display: none; position: fixed; inset: 0; z-index: 60; pointer-events: none; background: rgba(20, 19, 17, .74); align-items: center; justify-content: center; }
+body[data-drag][data-view="work"] .drop-veil { display: flex; animation: fade-in .18s ease both; }
+.drop-veil p { margin: 0; color: var(--paper); font-family: var(--serif); font-weight: 600; font-size: 24px; letter-spacing: .08em; padding: 22px 32px; border: 1.5px dashed var(--paper-3); }
+
+/* 押す部品の大きさ：マウスでは32px以上、指で触る端末・狭い画面では44px以上 */
+.icon-btn { height: 32px; min-width: 34px; }
+.zoom-val { min-height: 32px; }
+.seg button { min-height: 30px; }
+.chip { min-height: 32px; padding: 4px 8px; }
+.doc-x { width: 26px; height: 26px; line-height: 24px; margin-top: -4px; }
+.add-doc { padding: 6px 2px; }
+.link-btn { padding: 6px 0; }
+.pill { min-height: 36px; }
+.memo-chip { min-height: 32px; }
+@media (pointer: coarse), (max-width: 860px) {
+  .icon-btn, .zoom-val { min-height: 44px; min-width: 44px; }
+  .seg button { min-height: 42px; }
+  .tools { height: auto; min-height: 56px; padding: 6px 12px; flex-wrap: wrap; row-gap: 6px; }
+  .chip { min-height: 44px; }
+  .panel-scene { height: auto; min-height: 56px; }
+  .panel-scene select { height: 44px; }
+  .link-btn, .logo, .add-doc, .foot-links a { min-height: 44px; display: inline-flex; align-items: center; }
+  .memo-link { display: flex; }
+  .pill, .memo-chip, .checks .back-btn { min-height: 44px; }
+  .doc-x { width: 44px; height: 44px; line-height: 42px; margin: -10px -10px -10px 0; }
+  .ev-table select, .ev-table input, .opt-row input, .add-word input, .add-word button { min-height: 44px; }
+  .dl-each .dl { min-height: 44px; display: flex; align-items: center; }
+}
+/* 狭い画面：書類ごとに「甲1」と外すボタンを見せ、横に並べる（以前は書類の区別がつかず、外すこともできなかった） */
+@media (max-width: 860px) {
+  #docList { display: flex; flex: none; }
+  .doc { display: flex; flex-direction: column; flex: none; min-width: 96px; border-right: 1px solid var(--line-dark); }
+  .doc .doc-name { display: flex; align-items: center; gap: 4px; max-width: 220px; padding: 2px 4px 0 12px; border-top: 0; }
+  .doc .doc-name b { flex: none; }
+  .doc .doc-name .doc-x { order: 3; margin-left: auto; }
+  .doc .doc-name .doc-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; color: var(--paper-3); }
+  .rail-pending { flex: none; border-top: 0; padding: 10px 14px; max-width: 240px; }
+}
+@media print { .view, .view * { animation: none !important; } }
